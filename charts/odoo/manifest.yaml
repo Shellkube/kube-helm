@@ -1,0 +1,288 @@
+NAME: trial-odoo
+LAST DEPLOYED: Tue Apr 25 06:46:51 2023
+NAMESPACE: sk
+STATUS: pending-install
+REVISION: 1
+HOOKS:
+---
+# Source: odoo/charts/postgresql/templates/tests/test-connection.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "trial-odoo-postgresql-test-connection"
+  labels:
+    helm.sh/chart: postgresql-0.1.0
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/instance: trial-odoo
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['trial-odoo-postgresql:5432']
+  restartPolicy: Never
+---
+# Source: odoo/templates/tests/test-connection.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "trial-odoo-test-connection"
+  labels:
+    helm.sh/chart: odoo-0.1.0
+    app.kubernetes.io/name: odoo
+    app.kubernetes.io/instance: trial-odoo
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['trial-odoo:8069']
+  restartPolicy: Never
+MANIFEST:
+---
+# Source: odoo/charts/postgresql/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: trial-odoo-postgresql
+  labels:
+    helm.sh/chart: postgresql-0.1.0
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/instance: trial-odoo
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: odoo/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: trial-odoo
+  labels:
+    helm.sh/chart: odoo-0.1.0
+    app.kubernetes.io/name: odoo
+    app.kubernetes.io/instance: trial-odoo
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: odoo/charts/postgresql/templates/pvc.yaml
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: trial-odoo-postgresql
+  namespace: "sk"
+  labels:
+    app.kubernetes.io/name: postgresql
+    helm.sh/chart: postgresql-0.1.0
+    app.kubernetes.io/instance: trial-odoo
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+spec:
+  accessModes:
+    - "ReadWriteOnce"
+  resources:
+    requests:
+      storage: "1Gi"
+---
+# Source: odoo/templates/pvc.yaml
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: trial-odoo
+  namespace: "sk"
+  labels:
+    app.kubernetes.io/name: odoo
+    helm.sh/chart: odoo-0.1.0
+    app.kubernetes.io/instance: trial-odoo
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+spec:
+  accessModes:
+    - "ReadWriteOnce"
+  resources:
+    requests:
+      storage: "1Gi"
+---
+# Source: odoo/charts/postgresql/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: trial-odoo-postgresql
+  labels:
+    helm.sh/chart: postgresql-0.1.0
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/instance: trial-odoo
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/instance: trial-odoo
+---
+# Source: odoo/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: trial-odoo
+  labels:
+    helm.sh/chart: odoo-0.1.0
+    app.kubernetes.io/name: odoo
+    app.kubernetes.io/instance: trial-odoo
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8069
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: odoo
+    app.kubernetes.io/instance: trial-odoo
+---
+# Source: odoo/charts/postgresql/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trial-odoo-postgresql
+  labels:
+    helm.sh/chart: postgresql-0.1.0
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/instance: trial-odoo
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: postgresql
+      app.kubernetes.io/instance: trial-odoo
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: postgresql
+        app.kubernetes.io/instance: trial-odoo
+    spec:
+      serviceAccountName: trial-odoo-postgresql
+      securityContext:
+        {}
+      containers:
+        - name: postgresql
+          securityContext:
+            {}
+          image: "postgres:15.2"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 5432
+              protocol: TCP
+          env:
+          - name: POSTGRES_USER
+            value: odoo
+          - name: POSTGRES_PASSWORD
+            value: odoo
+          - name: POSTGRES_DB
+            value: postgres
+          volumeMounts:
+          - name: postgres-data
+            mountPath: /var/lib/postgresql/data
+            subPath: postgres
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          resources:
+            {}
+      volumes:
+      - name: postgres-data
+        persistentVolumeClaim:
+          claimName: trial-odoo-postgresql
+---
+# Source: odoo/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trial-odoo
+  labels:
+    helm.sh/chart: odoo-0.1.0
+    app.kubernetes.io/name: odoo
+    app.kubernetes.io/instance: trial-odoo
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+  namespace: 
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: odoo
+      app.kubernetes.io/instance: trial-odoo
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: odoo
+        app.kubernetes.io/instance: trial-odoo
+    spec:
+      serviceAccountName: trial-odoo
+      securityContext:
+        {}
+      containers:
+        - name: odoo
+          securityContext:
+            {}
+          image: "shellkube/o16:16.0"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8069
+              protocol: TCP
+          env:
+          - name: PGHOST
+            value: postgresql
+          - name: PGUSER
+            value: odoo
+          - name: PGPASSWORD
+            value: odoo
+          - name: PGDATABASE
+            value: postgres
+          volumeMounts:
+          - name: odoo-data
+            mountPath: /var/lib/odoo
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          resources:
+            null
+      volumes:
+      - name: odoo-data
+        persistentVolumeClaim:
+          claimName: trial-odoo
+
+NOTES:
+1. Get the application URL by running these commands:
+  export POD_NAME=$(kubectl get pods --namespace sk -l "app.kubernetes.io/name=odoo,app.kubernetes.io/instance=trial-odoo" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace sk $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl --namespace sk port-forward $POD_NAME 8080:$CONTAINER_PORT

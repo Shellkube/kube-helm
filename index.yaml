@@ -1,0 +1,18 @@
+apiVersion: v1
+entries:
+  odoo:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2023-07-25T17:44:46.551466257Z"
+    dependencies:
+    - name: common
+      repository: ""
+      version: 2.2.4
+    description: A Helm chart for Kubernetes
+    digest: 43d947186c7c41c54cf3bd7e5c3f5f5ce8cc51d38230ddbdbf9cdad1dd6b9fc3
+    name: odoo
+    type: application
+    urls:
+    - git@github.com:Shellkube/kube-helm.git/odoo-0.1.0.tgz
+    version: 0.1.0
+generated: "2023-07-25T17:44:46.548975175Z"
